@@ -15,12 +15,13 @@ Please note that this project is released with a [Contributor Code of Conduct](C
 1. Configure and install the dependencies: `terraform init`
 1. Create a new branch: `git checkout -b my-branch-name`
 1. Make your change, validate and confirm it works.
+1. Format your code with `terraform fmt`.
 1. Push to your fork and [submit a pull request][pr]
 1. Pat yourself on the back and wait for your pull request to be reviewed and merged.
 
 Here are a few things you can do that will increase the likelihood of your pull request being accepted:
 
-- Follow the styling conventions in the repository.
+- Follow the styling conventions in the repository and run `terraform fmt` on your code before committing.
 - Validate your changes with `terraform validate`, `terraform plan` and `terraform apply`.
 - Keep your change as focused as possible. If there are multiple changes you would like to make that are not dependent upon each other, consider submitting them as separate pull requests.
 - Write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
