@@ -44,7 +44,7 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 resource "azurerm_subnet" "firewall_subnet" {
-  address_prefixes     = var.firewall_subnet_address_prefixes
+  address_prefixes = var.firewall_subnet_address_prefixes
   # The subnet name has to be exactly this, in order for the subnet to be used for a firewall
   name                 = "AzureFirewallSubnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
@@ -55,7 +55,7 @@ resource "azurerm_subnet" "firewall_subnet" {
 }
 
 resource "azurerm_subnet" "management_subnet" {
-  address_prefixes     = var.firewall_management_subnet_address_prefixes
+  address_prefixes = var.firewall_management_subnet_address_prefixes
   # The subnet name has to be exactly this in order for the subnet to be used for the firewall management
   name                 = "AzureFirewallManagementSubnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
@@ -132,11 +132,11 @@ resource "azurerm_firewall_policy_rule_collection_group" "firewall_policy_rule_c
   }
 
   application_rule_collection {
-    action = "Allow"
-    name = "AllowApplicationRules"
+    action   = "Allow"
+    name     = "AllowApplicationRules"
     priority = 1000
     rule {
-      name = "GitHub"
+      name             = "GitHub"
       source_addresses = ["*"]
       destination_fqdns = [
         # These FQDNs have been taken from the GitHub documentation for self-hosted runner networking
@@ -180,7 +180,7 @@ resource "azurerm_firewall" "firewall" {
   location            = var.location
   name                = "${var.base_name}-firewall"
   resource_group_name = azurerm_resource_group.resource_group.name
-  firewall_policy_id = azurerm_firewall_policy.firewall_policy.id
+  firewall_policy_id  = azurerm_firewall_policy.firewall_policy.id
   sku_name            = "AZFW_VNet"
   sku_tier            = "Standard"
   ip_configuration {
