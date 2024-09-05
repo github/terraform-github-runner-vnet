@@ -10,22 +10,22 @@ Terraform modules that configure and maintain the infrastructure needed to run G
 
 This repo contains two Terraform modules:
 
-* [nsg](./modules/nsg/) module: Uses a [Network Security Group (NSG)](https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview) to manage the network security of the VNet.
+- [nsg](./modules/nsg/) module: Uses a [Network Security Group (NSG)](https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview) to manage the network security of the VNet.
 
 ```hcl
 module "github_runner_vnet" {
   # Use the nsg version
-  source = "github.com/garnertb/github-runner-vnet/nsg"
+  source = "github.com/github/terraform-github-runner-vnet/nsg"
 
   # The resources use this base_name as a name prefix, e.g. ${base_name}-rg for the resource group
   base_name = "vnet-test"
-  
+
   # Retrieve through the GitHub API (see GitHub docs for instructions)
   github_enterprise_id = "12345"
 }
 ```
 
-* [firewall](./modules/firewall/) module: Uses an [Azure Firewall](https://learn.microsoft.com/en-us/azure/firewall/overview) to manage the network security of the VNet.
+- [firewall](./modules/firewall/) module: Uses an [Azure Firewall](https://learn.microsoft.com/en-us/azure/firewall/overview) to manage the network security of the VNet.
 
 <details><summary>Terraform config for the firewall</summary>
 
@@ -34,11 +34,11 @@ Provision and configure the infrastructure in Terraform by calling this module:
 ```hcl
 module "github_runner_vnet" {
   # Use the firewall version
-  source = "github.com/garnertb/github-runner-vnet/firewall"
+  source = "github.com/github/terraform-github-runner-vnet/firewall"
 
   # The resources use this base_name as a name prefix, e.g. ${base_name}-rg for the resource group
   base_name = "vnet-test"
-  
+
   # Retrieve through the GitHub API (see GitHub docs for instructions)
   github_enterprise_id = "12345"
 }
