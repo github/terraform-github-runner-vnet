@@ -1,7 +1,7 @@
 # Contributing
 
-[fork]: https://github.com/github/github-runner-vnet/fork
-[pr]: https://github.com/github/github-runner-vnet/compare
+[fork]: https://github.com/github/terraform-github-runner-vnet/fork
+[pr]: https://github.com/github/terraform-github-runner-vnet/compare
 
 Hi there! We're thrilled that you'd like to contribute to this project. Your help is essential for keeping it great.
 
