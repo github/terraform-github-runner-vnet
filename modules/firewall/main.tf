@@ -16,23 +16,31 @@ locals {
   rg_name = "${var.base_name}-rg"
   ns_name = "${var.base_name}-ns"
 
+  # GitHub-hosted runner communication requirements, including VNet-specific hosts:
+  # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#communication-requirements-for-github-hosted-runners
+  # The final three retain earlier module allowances for GitHub web assets and container layers.
   compatibility_https_fqdns = [
     "github.com",
     "api.github.com",
     "*.actions.githubusercontent.com",
+    "codeload.github.com",
+    "*.blob.core.windows.net",
     "objects.githubusercontent.com",
     "objects-origin.githubusercontent.com",
     "github-releases.githubusercontent.com",
     "github-registry-files.githubusercontent.com",
-    "release-assets.githubusercontent.com",
-    "codeload.github.com",
-    "cafe.github.com",
-    "*.blob.core.windows.net",
-    "ghcr.io",
-    "*.ghcr.io",
     "*.pkg.github.com",
-    "*.githubassets.com",
-    "github-cloud.s3.amazonaws.com"
+    "pkg-containers.githubusercontent.com",
+    "ghcr.io",
+    "github-cloud.githubusercontent.com",
+    "github-cloud.s3.amazonaws.com",
+    "dependabot-actions.githubapp.com",
+    "release-assets.githubusercontent.com",
+    "api.snapcraft.io",
+    "*.core.windows.net",
+    "cafe.github.com",
+    "*.ghcr.io",
+    "*.githubassets.com"
   ]
   https_fqdns = distinct(concat(
     var.egress_profile == "compatibility" ? local.compatibility_https_fqdns : [],

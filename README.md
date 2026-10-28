@@ -37,7 +37,7 @@ An explicit working outbound path is also required. The NSG module does not prov
 | Concern | Default (`compatibility`, no logging inputs) | Opt-in |
 |---|---|---|
 | Inbound and runner-peer isolation | Mitigated | — |
-| Broad Storage service-tag access | NSG: Storage rule removed, but public 443 remains. Firewall: network bypass removed, `*.blob.core.windows.net` retained | `restricted` with explicit destinations |
+| Broad Storage service-tag access | NSG: Storage rule removed, but public 443 remains. Firewall: network bypass removed, but documented `*.blob.core.windows.net`/`*.core.windows.net` HTTPS remains | `restricted` with explicit destinations |
 | Azure platform DNS bypass | Not mitigated | `dns_resolver_ips` (+ `restricted`) |
 | Shared-service FQDN content | Not mitigated | `restricted` with an explicit firewall FQDN list |
 | Network diagnostics/flow logs | Not configured | `flow_logs`, firewall `diagnostics` |

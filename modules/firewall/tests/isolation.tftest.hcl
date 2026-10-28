@@ -166,12 +166,27 @@ run "isolates_runner_subnet" {
     condition = alltrue(flatten([
       for collection in azurerm_firewall_policy_rule_collection_group.firewall_policy_rule_collection_group.application_rule_collection :
       [for rule in collection.rule : tolist(rule.destination_fqdns) == tolist([
-        "github.com", "api.github.com", "*.actions.githubusercontent.com",
-        "objects.githubusercontent.com", "objects-origin.githubusercontent.com",
-        "github-releases.githubusercontent.com", "github-registry-files.githubusercontent.com",
-        "release-assets.githubusercontent.com", "codeload.github.com", "cafe.github.com",
-        "*.blob.core.windows.net", "ghcr.io", "*.ghcr.io", "*.pkg.github.com",
-        "*.githubassets.com", "github-cloud.s3.amazonaws.com"
+        "github.com",
+        "api.github.com",
+        "*.actions.githubusercontent.com",
+        "codeload.github.com",
+        "*.blob.core.windows.net",
+        "objects.githubusercontent.com",
+        "objects-origin.githubusercontent.com",
+        "github-releases.githubusercontent.com",
+        "github-registry-files.githubusercontent.com",
+        "*.pkg.github.com",
+        "pkg-containers.githubusercontent.com",
+        "ghcr.io",
+        "github-cloud.githubusercontent.com",
+        "github-cloud.s3.amazonaws.com",
+        "dependabot-actions.githubapp.com",
+        "release-assets.githubusercontent.com",
+        "api.snapcraft.io",
+        "*.core.windows.net",
+        "cafe.github.com",
+        "*.ghcr.io",
+        "*.githubassets.com"
       ])]
     ]))
     error_message = "Compatibility must preserve its existing ordered HTTPS destination list."
