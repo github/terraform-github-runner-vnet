@@ -192,7 +192,9 @@ run "isolates_runner_subnet" {
         "*.core.windows.net",
         "cafe.github.com",
         "*.ghcr.io",
-        "*.githubassets.com"
+        "*.githubassets.com",
+        "*.github.com",
+        "*.githubusercontent.com"
       ])]
     ]))
     error_message = "Compatibility must preserve its existing ordered HTTPS destination list."

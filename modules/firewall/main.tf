@@ -18,7 +18,7 @@ locals {
 
   # GitHub-hosted runner communication requirements, including VNet-specific hosts:
   # https://docs.github.com/en/actions/reference/runners/github-hosted-runners#communication-requirements-for-github-hosted-runners
-  # The final three retain earlier module allowances for GitHub web assets and container layers.
+  # The final five retain earlier module allowances, including the broad GitHub wildcards, for compatibility.
   compatibility_https_fqdns = [
     "github.com",
     "api.github.com",
@@ -40,7 +40,9 @@ locals {
     "*.core.windows.net",
     "cafe.github.com",
     "*.ghcr.io",
-    "*.githubassets.com"
+    "*.githubassets.com",
+    "*.github.com",
+    "*.githubusercontent.com"
   ]
   https_fqdns = distinct(concat(
     var.egress_profile == "compatibility" ? local.compatibility_https_fqdns : [],
