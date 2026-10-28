@@ -308,3 +308,51 @@ run "denies_additional_peered_prefixes" {
     error_message = "Additional local or peered prefixes must be denied after private-service exceptions."
   }
 }
+
+run "rejects_overlapping_additional_prefixes" {
+  command = plan
+  variables {
+    base_name                           = "runner-isolation-test"
+    github_business_id                  = "123456"
+    additional_private_address_prefixes = ["100.64.0.0/10", "100.64.1.0/24"]
+  }
+  expect_failures = [var.additional_private_address_prefixes]
+}
+
+run "rejects_overlapping_private_service_destinations" {
+  command = plan
+  variables {
+    base_name          = "runner-isolation-test"
+    github_business_id = "123456"
+    approved_private_service_rules = [
+      {
+        name                         = "overlap"
+        destination_address_prefixes = ["10.20.0.0/16", "10.20.1.15/32"]
+        destination_port_ranges      = ["443"]
+        protocol                     = "Tcp"
+      }
+    ]
+  }
+  expect_failures = [var.approved_private_service_rules]
+}
+
+run "accepts_adjacent_nonoverlapping_prefixes" {
+  command = plan
+  variables {
+    base_name                           = "runner-isolation-test"
+    github_business_id                  = "123456"
+    additional_private_address_prefixes = ["100.64.0.0/24", "100.64.1.0/24", "198.18.0.0/15"]
+    approved_private_service_rules = [
+      {
+        name                         = "adjacent"
+        destination_address_prefixes = ["10.20.1.0/25", "10.20.1.128/25"]
+        destination_port_ranges      = ["443"]
+        protocol                     = "Tcp"
+      }
+    ]
+  }
+  assert {
+    condition     = length(var.additional_private_address_prefixes) == 3
+    error_message = "Adjacent, non-overlapping prefixes must be accepted."
+  }
+}

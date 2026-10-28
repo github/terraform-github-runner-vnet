@@ -66,6 +66,21 @@ variable "approved_private_service_rules" {
     ])
     error_message = "Private-service rules require named CIDR destinations, explicit port ranges, and a valid protocol."
   }
+
+  validation {
+    condition = alltrue([
+      for rule in var.approved_private_service_rules : alltrue(flatten([
+        for i, a in rule.destination_address_prefixes : [
+          for j, b in rule.destination_address_prefixes : j <= i || try(
+            cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
+            cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
+            false
+          )
+        ]
+      ]))
+    ])
+    error_message = "Destination prefixes within a private-service rule must not overlap; Azure rejects overlapping prefixes in one rule."
+  }
 }
 
 variable "firewall_subnet_address_prefixes" {
@@ -97,5 +112,18 @@ variable "additional_private_address_prefixes" {
       can(cidrhost(prefix, 0)) && try(tonumber(split("/", prefix)[1]) > 0, false)
     ])
     error_message = "Provide bounded CIDR prefixes, not 0.0.0.0/0."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for i, a in var.additional_private_address_prefixes : [
+        for j, b in var.additional_private_address_prefixes : j <= i || try(
+          cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
+          cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
+          false
+        )
+      ]
+    ]))
+    error_message = "Additional private prefixes must not overlap; Azure rejects overlapping prefixes in one rule."
   }
 }
