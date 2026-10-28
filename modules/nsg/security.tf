@@ -19,6 +19,18 @@ variable "approved_public_egress_cidrs" {
     ])
     error_message = "Provide bounded IPv4 CIDRs."
   }
+  validation {
+    condition = alltrue(flatten([
+      for i, a in var.approved_public_egress_cidrs : [
+        for j, b in var.approved_public_egress_cidrs : j <= i || try(
+          cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
+          cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
+          false
+        )
+      ]
+    ]))
+    error_message = "Approved public CIDRs must not overlap; Azure rejects overlapping prefixes in one rule. Collapse them first."
+  }
 }
 
 variable "dns_resolver_ips" {

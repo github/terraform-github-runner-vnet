@@ -139,3 +139,30 @@ run "vnet_flow_logging" {
     error_message = "Logging must target the VNet, not the deprecated NSG flow-log capture point."
   }
 }
+
+run "rejects_overlapping_public_cidrs" {
+  command = plan
+  variables {
+    egress_profile               = "restricted"
+    dns_resolver_ips             = ["10.1.0.4"]
+    dns_policy_reference         = "network-team/approved-domain-policy"
+    approved_public_egress_cidrs = ["192.0.2.0/24", "192.0.2.10/32"]
+  }
+  expect_failures = [var.approved_public_egress_cidrs]
+}
+
+run "accepts_adjacent_public_cidrs" {
+  command = plan
+  variables {
+    egress_profile               = "restricted"
+    dns_resolver_ips             = ["10.1.0.4"]
+    dns_policy_reference         = "network-team/approved-domain-policy"
+    approved_public_egress_cidrs = ["192.0.2.0/25", "192.0.2.128/25"]
+  }
+  assert {
+    condition = anytrue([for rule in azurerm_network_security_group.actions_nsg.security_rule :
+      rule.name == "AllowApprovedPublicHTTPS" && length(coalesce(rule.destination_address_prefixes, [])) == 2
+    ])
+    error_message = "Adjacent, non-overlapping public CIDRs must be accepted."
+  }
+}
