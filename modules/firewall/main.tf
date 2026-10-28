@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">3.0.0"
+      version = ">= 4.11.0, < 6.0"
     }
 
     azapi = {
@@ -15,6 +15,34 @@ terraform {
 locals {
   rg_name = "${var.base_name}-rg"
   ns_name = "${var.base_name}-ns"
+
+  compatibility_https_fqdns = [
+    "github.com",
+    "api.github.com",
+    "*.actions.githubusercontent.com",
+    "objects.githubusercontent.com",
+    "objects-origin.githubusercontent.com",
+    "github-releases.githubusercontent.com",
+    "github-registry-files.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "codeload.github.com",
+    "cafe.github.com",
+    "*.blob.core.windows.net",
+    "ghcr.io",
+    "*.ghcr.io",
+    "*.pkg.github.com",
+    "*.githubassets.com",
+    "github-cloud.s3.amazonaws.com"
+  ]
+  https_fqdns = distinct(concat(
+    var.egress_profile == "compatibility" ? local.compatibility_https_fqdns : [],
+    var.approved_https_fqdns
+  ))
+
+  dns_deny_rules = {
+    platform = { priority = 103, port = "*", destination = "AzurePlatformDNS" }
+    other    = { priority = 104, port = "53", destination = "*" }
+  }
 }
 
 # You need this if you haven't already registered the GitHub.Network resource provider in your Azure subscription.
@@ -38,6 +66,7 @@ resource "azurerm_virtual_network" "vnet" {
   location            = var.location
   name                = "${var.base_name}-vnet"
   resource_group_name = azurerm_resource_group.resource_group.name
+  dns_servers         = var.dns_resolver_ips
   depends_on = [
     azurerm_resource_group.resource_group
   ]
@@ -82,6 +111,136 @@ resource "azurerm_subnet" "runner_subnet" {
   ]
 }
 
+resource "azurerm_network_security_group" "runner_nsg" {
+  name                = "${var.base_name}-runner-nsg"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.resource_group.name
+
+  security_rule {
+    name                       = "DenyInboundRunnerTraffic"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                         = "DenyRunnerPeerOutbound"
+    priority                     = 100
+    direction                    = "Outbound"
+    access                       = "Deny"
+    protocol                     = "*"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "*"
+    destination_address_prefixes = var.runner_subnet_address_prefixes
+  }
+
+  dynamic "security_rule" {
+    for_each = length(var.dns_resolver_ips) == 0 ? {} : { tcp = "Tcp", udp = "Udp" }
+    content {
+      name                         = "AllowApprovedDNS-${security_rule.key}"
+      priority                     = security_rule.key == "tcp" ? 101 : 102
+      direction                    = "Outbound"
+      access                       = "Allow"
+      protocol                     = security_rule.value
+      source_port_range            = "*"
+      destination_port_range       = "53"
+      source_address_prefix        = "*"
+      destination_address_prefixes = var.dns_resolver_ips
+    }
+  }
+
+  dynamic "security_rule" {
+    for_each = length(var.dns_resolver_ips) == 0 ? {} : local.dns_deny_rules
+    content {
+      name                       = "DenyDNS-${security_rule.key}"
+      priority                   = security_rule.value.priority
+      direction                  = "Outbound"
+      access                     = "Deny"
+      protocol                   = "*"
+      source_port_range          = "*"
+      destination_port_range     = security_rule.value.port
+      source_address_prefix      = "*"
+      destination_address_prefix = security_rule.value.destination
+    }
+  }
+
+  dynamic "security_rule" {
+    for_each = var.approved_private_service_rules
+    content {
+      name                         = "AllowPrivateService-${security_rule.value.name}"
+      priority                     = 110 + security_rule.key
+      direction                    = "Outbound"
+      access                       = "Allow"
+      protocol                     = security_rule.value.protocol
+      source_port_range            = "*"
+      destination_port_ranges      = security_rule.value.destination_port_ranges
+      source_address_prefix        = "*"
+      destination_address_prefixes = security_rule.value.destination_address_prefixes
+    }
+  }
+
+  security_rule {
+    name                   = "DenyVirtualNetworkOutbound"
+    priority               = 200
+    direction              = "Outbound"
+    access                 = "Deny"
+    protocol               = "*"
+    source_port_range      = "*"
+    destination_port_range = "*"
+    source_address_prefix  = "*"
+    # VirtualNetwork can include the 0/0 UDR and inadvertently deny public GitHub traffic.
+    destination_address_prefixes = var.vnet_address_space
+  }
+
+  security_rule {
+    name                         = "DenyOtherPrivateNetworks"
+    priority                     = 201
+    direction                    = "Outbound"
+    access                       = "Deny"
+    protocol                     = "*"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "*"
+    destination_address_prefixes = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+  }
+
+  dynamic "security_rule" {
+    for_each = length(var.additional_private_address_prefixes) == 0 ? [] : [1]
+    content {
+      name                         = "DenyAdditionalPrivateNetworks"
+      priority                     = 202
+      direction                    = "Outbound"
+      access                       = "Deny"
+      protocol                     = "*"
+      source_port_range            = "*"
+      destination_port_range       = "*"
+      source_address_prefix        = "*"
+      destination_address_prefixes = var.additional_private_address_prefixes
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition = var.egress_profile != "restricted" || (
+        length(var.dns_resolver_ips) > 0 && length(trimspace(var.dns_policy_reference)) > 0 &&
+        length(var.approved_https_fqdns) > 0
+      )
+      error_message = "Restricted mode requires approved HTTPS FQDNs, filtering resolvers and their owner/policy reference."
+    }
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "runner_subnet_nsg_association" {
+  subnet_id                 = azurerm_subnet.runner_subnet.id
+  network_security_group_id = azurerm_network_security_group.runner_nsg.id
+}
+
 resource "azurerm_public_ip" "firewall_public_ip" {
   allocation_method   = "Static"
   location            = var.location
@@ -118,16 +277,38 @@ resource "azurerm_firewall_policy_rule_collection_group" "firewall_policy_rule_c
   name               = "DefaultRuleCollectionGroup"
   priority           = 200
 
-  network_rule_collection {
-    action   = "Allow"
-    name     = "AllowAzureStorage"
-    priority = 100
-    rule {
-      destination_addresses = ["Storage"]
-      destination_ports     = ["443"]
-      name                  = "AzureStorage"
-      protocols             = ["TCP"]
-      source_addresses      = ["*"]
+  dynamic "network_rule_collection" {
+    for_each = length(var.dns_resolver_ips) == 0 ? [] : [1]
+    content {
+      action   = "Allow"
+      name     = "ApprovedDNS"
+      priority = 100
+      rule {
+        destination_addresses = var.dns_resolver_ips
+        destination_ports     = ["53"]
+        name                  = "ApprovedDNS"
+        protocols             = ["TCP", "UDP"]
+        source_addresses      = var.runner_subnet_address_prefixes
+      }
+    }
+  }
+
+  dynamic "network_rule_collection" {
+    for_each = length(var.approved_private_service_rules) == 0 ? [] : [1]
+    content {
+      action   = "Allow"
+      name     = "ApprovedPrivateServices"
+      priority = 200
+      dynamic "rule" {
+        for_each = var.approved_private_service_rules
+        content {
+          name                  = rule.value.name
+          source_addresses      = var.runner_subnet_address_prefixes
+          destination_addresses = rule.value.destination_address_prefixes
+          destination_ports     = rule.value.destination_port_ranges
+          protocols             = rule.value.protocol == "*" ? ["Any"] : [upper(rule.value.protocol)]
+        }
+      }
     }
   }
 
@@ -136,25 +317,9 @@ resource "azurerm_firewall_policy_rule_collection_group" "firewall_policy_rule_c
     name     = "AllowApplicationRules"
     priority = 1000
     rule {
-      name             = "GitHub"
-      source_addresses = ["*"]
-      destination_fqdns = [
-        # These FQDNs have been taken from the GitHub documentation for self-hosted runner networking
-        # and the https://api.github.com/meta API response. Both sources list more specific FQDNs so 
-        # organizations wishing to minimize use of wildcards can consult those sources to build a more
-        # explicit list of required FQDNs.
-        # For essential operation
-        "github.com",
-        "*.github.com",
-        "*.githubusercontent.com",
-        "*.blob.core.windows.net",
-        # For packages
-        "ghcr.io",
-        "*.ghcr.io",
-        "*.githubassets.com",
-        # For LFS
-        "github-cloud.s3.amazonaws.com"
-      ]
+      name              = "GitHub"
+      source_addresses  = var.runner_subnet_address_prefixes
+      destination_fqdns = local.https_fqdns
       protocols {
         port = "443"
         type = "Https"
