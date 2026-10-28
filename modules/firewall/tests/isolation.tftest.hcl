@@ -45,6 +45,12 @@ mock_provider "azurerm" {
 
 mock_provider "azapi" {
   override_during = plan
+
+  mock_resource "azapi_resource" {
+    defaults = {
+      output = "{\"tags\":{\"GitHubId\":\"mock-network-settings-id\"}}"
+    }
+  }
 }
 
 override_resource {
@@ -268,6 +274,11 @@ run "historical_minimal_call_plans_with_compatibility" {
     base_name          = "runner-isolation-test"
     github_business_id = "123456"
   }
+  assert {
+    condition     = output.network_settings_id == "mock-network-settings-id"
+    error_message = "The GitHub network settings ID must decode from the AzAPI response."
+  }
+
   assert {
     condition = anytrue([for rule in azurerm_network_security_group.runner_nsg.security_rule :
       rule.name == "DenyInboundRunnerTraffic"

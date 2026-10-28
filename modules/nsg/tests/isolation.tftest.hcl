@@ -1,5 +1,13 @@
 mock_provider "azurerm" {}
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  override_during = plan
+
+  mock_resource "azapi_resource" {
+    defaults = {
+      output = "{\"tags\":{\"GitHubId\":\"mock-network-settings-id\"}}"
+    }
+  }
+}
 
 variables {
   egress_profile = "compatibility"
