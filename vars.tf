@@ -21,7 +21,26 @@ variable "runner_subnet_address_prefixes" {
   default     = ["10.0.0.0/24"]
 }
 
+variable "approved_private_service_rules" {
+  description = "Explicit private destination CIDRs, ports, and protocols runners may access. Runner subnet destinations are always denied."
+  type = list(object({
+    name                         = string
+    destination_address_prefixes = list(string)
+    destination_port_ranges      = list(string)
+    protocol                     = string
+  }))
+  default  = []
+  nullable = false
+}
+
 variable "github_business_id" {
   description = "GitHub Enterprise or Organization Database ID"
   type        = string
+}
+
+variable "additional_private_address_prefixes" {
+  description = "Additional local or peered address prefixes denied after approved private-service exceptions."
+  type        = list(string)
+  default     = []
+  nullable    = false
 }
