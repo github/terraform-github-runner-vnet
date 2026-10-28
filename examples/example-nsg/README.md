@@ -2,10 +2,16 @@
 
 This folder shows an example of Terraform code that uses the [nsg](../../modules/nsg) module to create an Azure VNET using Network Security Groups to manage network access.
 
-## Source reproducibility
+## Using this module from another repository
 
-The module `source` is pinned to a full commit SHA, currently the latest
-published commit (`36d428cec62e4e9d3b91c176cdb8da62d35e883f`), so that `terraform init`
-always fetches the same code. Update the `ref` to a commit or release you have
-reviewed when upgrading. `tests/fixtures/nsg` exercises the module from the
-local checkout.
+This example references the module by relative path so it always matches the
+code in this repository. When consuming the module from your own configuration,
+pin the source to a release tag or full commit SHA you have reviewed:
+
+```hcl
+module "vnet" {
+  source             = "git::https://github.com/github/terraform-github-runner-vnet.git//modules/nsg?ref=<release-tag-or-full-commit-sha>"
+  base_name          = var.base_name
+  github_business_id = var.github_business_id
+}
+```

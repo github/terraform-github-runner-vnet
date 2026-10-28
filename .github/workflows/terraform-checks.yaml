@@ -34,7 +34,7 @@ jobs:
 
       - name: Initialize and validate Terraform configurations
         run: |
-          for directory in . modules/nsg modules/firewall tests/fixtures/root tests/fixtures/nsg tests/fixtures/firewall; do
+          for directory in . modules/nsg modules/firewall tests/fixtures/root tests/fixtures/nsg tests/fixtures/firewall examples/example-nsg examples/example-firewall; do
             terraform -chdir="$directory" init -backend=false -input=false
             terraform -chdir="$directory" validate
           done
