@@ -6,7 +6,15 @@ mock_provider "azurerm" {
     }
   }
 }
-mock_provider "azapi" {}
+mock_provider "azapi" {
+  override_during = plan
+
+  mock_resource "azapi_resource" {
+    defaults = {
+      output = "{\"tags\":{\"GitHubId\":\"mock-network-settings-id\"}}"
+    }
+  }
+}
 
 variables {
   base_name          = "runner-security-test"
@@ -67,6 +75,11 @@ run "restricted_controls_dns_and_destinations" {
 
 run "historical_minimal_call_plans_with_compatibility" {
   command = plan
+  assert {
+    condition     = output.network_settings_id == "mock-network-settings-id"
+    error_message = "The GitHub network settings ID must decode from the AzAPI response."
+  }
+
   assert {
     condition = anytrue([for rule in azurerm_network_security_group.actions_nsg.security_rule :
       rule.name == "AllowPublicHTTPSCompatibility"
