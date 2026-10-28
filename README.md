@@ -6,6 +6,7 @@ Terraform modules that configure and maintain the infrastructure needed to run G
 
 1. Before running, review [pre-requisites](https://docs.github.com/en/enterprise-cloud@latest/admin/configuration/configuring-private-networking-for-hosted-compute-products/configuring-private-networking-for-github-hosted-runners#prerequisites) from the documentation to ensure your environment is properly configured.
 1. The [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/) must be installed and on the system path, logged in with the identity that you want these resources created under, and Azure Subscription configured.
+1. AzureRM 4.x and later require an explicit subscription and no longer use the Azure CLI's default. Set `ARM_SUBSCRIPTION_ID` (for example `export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"`) or `subscription_id` in your `azurerm` provider block before running Terraform.
 1. The `GitHub.Network` resource provider must be registered in the Azure Subscription. The Terraform modules contain HCL to register this provider, but it is commented out since you may not want this managed by Terraform. See the above GitHub documentation for a sample AZ CLI command to register the provider.
 
 ## Choosing a configuration
