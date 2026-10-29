@@ -201,3 +201,31 @@ run "accepts_adjacent_nonoverlapping_prefixes" {
     error_message = "Adjacent, non-overlapping prefixes must be accepted."
   }
 }
+
+run "rejects_non_adjacent_and_duplicate_overlaps" {
+  command = plan
+  variables {
+    base_name                           = "runner-isolation-test"
+    github_business_id                  = "123456"
+    additional_private_address_prefixes = ["100.64.0.0/10", "198.18.0.0/15", "100.65.0.0/16"]
+    approved_private_service_rules = [
+      {
+        name                         = "duplicate"
+        destination_address_prefixes = ["10.20.1.15/32", "10.30.0.0/16", "10.20.1.15/32"]
+        destination_port_ranges      = ["443"]
+        protocol                     = "Tcp"
+      }
+    ]
+  }
+  expect_failures = [var.additional_private_address_prefixes, var.approved_private_service_rules]
+}
+
+run "rejects_ipv6_private_prefixes" {
+  command = plan
+  variables {
+    base_name                           = "runner-isolation-test"
+    github_business_id                  = "123456"
+    additional_private_address_prefixes = ["fd00::/8"]
+  }
+  expect_failures = [var.additional_private_address_prefixes]
+}

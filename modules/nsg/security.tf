@@ -21,12 +21,14 @@ variable "approved_public_egress_cidrs" {
   }
   validation {
     condition = alltrue(flatten([
-      for i, a in var.approved_public_egress_cidrs : [
-        for j, b in var.approved_public_egress_cidrs : j <= i || try(
-          cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
-          cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
-          false
-        )
+      for sorted_intervals in [sort([
+        for prefix in var.approved_public_egress_cidrs : format("%010d %010d",
+          sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]),
+          sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]) + pow(2, 32 - tonumber(split("/", prefix)[1])) - 1
+        ) if can(cidrnetmask(prefix))
+        ])] : [
+        for position, interval in sorted_intervals :
+        position == 0 || tonumber(split(" ", interval)[0]) > tonumber(split(" ", sorted_intervals[max(position - 1, 0)])[1])
       ]
     ]))
     error_message = "Approved public CIDRs must not overlap; Azure rejects overlapping prefixes in one rule. Collapse them first."

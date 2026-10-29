@@ -48,7 +48,7 @@ variable "approved_private_service_rules" {
       length(rule.destination_address_prefixes) > 0 &&
       alltrue([
         for prefix in rule.destination_address_prefixes :
-        can(cidrhost(prefix, 0)) && try(tonumber(split("/", prefix)[1]) > 0, false)
+        can(cidrnetmask(prefix)) && try(tonumber(split("/", prefix)[1]) > 0, false)
       ]) &&
       length(rule.destination_port_ranges) > 0 &&
       alltrue([
@@ -64,18 +64,20 @@ variable "approved_private_service_rules" {
       ]) &&
       contains(["Tcp", "Udp", "*"], rule.protocol)
     ])
-    error_message = "Private-service rules require named CIDR destinations, explicit port ranges, and a valid protocol."
+    error_message = "Private-service rules require named IPv4 CIDR destinations, explicit port ranges, and a valid protocol."
   }
 
   validation {
     condition = alltrue([
       for rule in var.approved_private_service_rules : alltrue(flatten([
-        for i, a in rule.destination_address_prefixes : [
-          for j, b in rule.destination_address_prefixes : j <= i || try(
-            cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
-            cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
-            false
-          )
+        for sorted_intervals in [sort([
+          for prefix in rule.destination_address_prefixes : format("%010d %010d",
+            sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]),
+            sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]) + pow(2, 32 - tonumber(split("/", prefix)[1])) - 1
+          ) if can(cidrnetmask(prefix))
+          ])] : [
+          for position, interval in sorted_intervals :
+          position == 0 || tonumber(split(" ", interval)[0]) > tonumber(split(" ", sorted_intervals[max(position - 1, 0)])[1])
         ]
       ]))
     ])
@@ -109,19 +111,21 @@ variable "additional_private_address_prefixes" {
   validation {
     condition = alltrue([
       for prefix in var.additional_private_address_prefixes :
-      can(cidrhost(prefix, 0)) && try(tonumber(split("/", prefix)[1]) > 0, false)
+      can(cidrnetmask(prefix)) && try(tonumber(split("/", prefix)[1]) > 0, false)
     ])
-    error_message = "Provide bounded CIDR prefixes, not 0.0.0.0/0."
+    error_message = "Provide bounded IPv4 CIDR prefixes, not 0.0.0.0/0."
   }
 
   validation {
     condition = alltrue(flatten([
-      for i, a in var.additional_private_address_prefixes : [
-        for j, b in var.additional_private_address_prefixes : j <= i || try(
-          cidrhost(format("%s/%d", cidrhost(a, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0) !=
-          cidrhost(format("%s/%d", cidrhost(b, 0), min(tonumber(split("/", a)[1]), tonumber(split("/", b)[1]))), 0),
-          false
-        )
+      for sorted_intervals in [sort([
+        for prefix in var.additional_private_address_prefixes : format("%010d %010d",
+          sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]),
+          sum([for index, octet in split(".", cidrhost(prefix, 0)) : tonumber(octet) * pow(256, 3 - index)]) + pow(2, 32 - tonumber(split("/", prefix)[1])) - 1
+        ) if can(cidrnetmask(prefix))
+        ])] : [
+        for position, interval in sorted_intervals :
+        position == 0 || tonumber(split(" ", interval)[0]) > tonumber(split(" ", sorted_intervals[max(position - 1, 0)])[1])
       ]
     ]))
     error_message = "Additional private prefixes must not overlap; Azure rejects overlapping prefixes in one rule."
