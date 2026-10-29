@@ -166,3 +166,30 @@ run "accepts_adjacent_public_cidrs" {
     error_message = "Adjacent, non-overlapping public CIDRs must be accepted."
   }
 }
+
+run "rejects_non_adjacent_public_overlap" {
+  command = plan
+  variables {
+    egress_profile               = "restricted"
+    dns_resolver_ips             = ["10.1.0.4"]
+    dns_policy_reference         = "network-team/approved-domain-policy"
+    approved_public_egress_cidrs = ["203.0.113.0/24", "198.51.100.0/24", "203.0.113.128/25", "198.51.100.0/24"]
+  }
+  expect_failures = [var.approved_public_egress_cidrs]
+}
+
+run "accepts_large_disjoint_public_allowlist" {
+  command = plan
+  variables {
+    egress_profile       = "restricted"
+    dns_resolver_ips     = ["10.1.0.4"]
+    dns_policy_reference = "network-team/approved-domain-policy"
+    approved_public_egress_cidrs = flatten([
+      for third in range(24) : [for fourth in range(250) : format("198.18.%d.%d/32", third, fourth)]
+    ])
+  }
+  assert {
+    condition     = length(var.approved_public_egress_cidrs) == 6000
+    error_message = "A large disjoint allowlist must pass overlap validation."
+  }
+}
