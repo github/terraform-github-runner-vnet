@@ -397,3 +397,25 @@ run "rejects_ipv6_private_prefixes" {
   }
   expect_failures = [var.additional_private_address_prefixes]
 }
+
+run "rejects_ipv6_vnet_and_runner_prefixes" {
+  command = plan
+  variables {
+    base_name                      = "runner-isolation-test"
+    github_business_id             = "123456"
+    vnet_address_space             = ["10.0.0.0/16", "fd00:db8::/48"]
+    runner_subnet_address_prefixes = ["fd00:db8::/64"]
+  }
+  expect_failures = [var.vnet_address_space, var.runner_subnet_address_prefixes]
+}
+
+run "rejects_ipv6_firewall_subnet_prefixes" {
+  command = plan
+  variables {
+    base_name                                   = "runner-isolation-test"
+    github_business_id                          = "123456"
+    firewall_subnet_address_prefixes            = ["fd00:db8:1::/64"]
+    firewall_management_subnet_address_prefixes = ["fd00:db8:2::/64"]
+  }
+  expect_failures = [var.firewall_subnet_address_prefixes, var.firewall_management_subnet_address_prefixes]
+}

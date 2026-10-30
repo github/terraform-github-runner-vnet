@@ -229,3 +229,14 @@ run "rejects_ipv6_private_prefixes" {
   }
   expect_failures = [var.additional_private_address_prefixes]
 }
+
+run "rejects_ipv6_vnet_and_runner_prefixes" {
+  command = plan
+  variables {
+    base_name                      = "runner-isolation-test"
+    github_business_id             = "123456"
+    vnet_address_space             = ["10.0.0.0/16", "fd00:db8::/48"]
+    runner_subnet_address_prefixes = ["fd00:db8::/64"]
+  }
+  expect_failures = [var.vnet_address_space, var.runner_subnet_address_prefixes]
+}
