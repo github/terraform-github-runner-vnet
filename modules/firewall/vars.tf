@@ -13,12 +13,22 @@ variable "vnet_address_space" {
   description = "Address space for the virtual network"
   type        = list(string)
   default     = ["10.0.0.0/16"]
+
+  validation {
+    condition     = length(var.vnet_address_space) > 0 && alltrue([for prefix in var.vnet_address_space : can(cidrnetmask(prefix))])
+    error_message = "Provide IPv4 CIDR prefixes; GitHub-hosted runners on Azure private networking are IPv4-only."
+  }
 }
 
 variable "runner_subnet_address_prefixes" {
   description = "Address prefixes for the runner subnet"
   type        = list(string)
   default     = ["10.0.0.0/24"]
+
+  validation {
+    condition     = length(var.runner_subnet_address_prefixes) > 0 && alltrue([for prefix in var.runner_subnet_address_prefixes : can(cidrnetmask(prefix))])
+    error_message = "Provide IPv4 CIDR prefixes; GitHub-hosted runners on Azure private networking are IPv4-only."
+  }
 }
 
 variable "approved_private_service_rules" {
@@ -89,12 +99,22 @@ variable "firewall_subnet_address_prefixes" {
   description = "Address prefixes for the firewall subnet"
   type        = list(string)
   default     = ["10.0.1.0/26"]
+
+  validation {
+    condition     = length(var.firewall_subnet_address_prefixes) > 0 && alltrue([for prefix in var.firewall_subnet_address_prefixes : can(cidrnetmask(prefix))])
+    error_message = "Provide IPv4 CIDR prefixes; GitHub-hosted runners on Azure private networking are IPv4-only."
+  }
 }
 
 variable "firewall_management_subnet_address_prefixes" {
   description = "Address prefixes for the management subnet"
   type        = list(string)
   default     = ["10.0.2.0/26"]
+
+  validation {
+    condition     = length(var.firewall_management_subnet_address_prefixes) > 0 && alltrue([for prefix in var.firewall_management_subnet_address_prefixes : can(cidrnetmask(prefix))])
+    error_message = "Provide IPv4 CIDR prefixes; GitHub-hosted runners on Azure private networking are IPv4-only."
+  }
 }
 
 variable "github_business_id" {

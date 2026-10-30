@@ -4,6 +4,8 @@ This folder contains a Terraform module to create an Azure Virtual Network that 
 
 The module also associates a dedicated NSG with the runner subnet only. It denies all new inbound connections and blocks outbound runner peers, configured VNet prefixes and RFC1918 destinations, because local routes do not necessarily traverse the firewall. It uses concrete CIDRs: Azure's `VirtualNetwork` service tag can include the firewall's `0.0.0.0/0` UDR and inadvertently deny public GitHub traffic. The firewall and management subnets are not associated with this NSG. Runner-initiated public GitHub traffic continues to use the existing default route to the firewall. Use `additional_private_address_prefixes` to deny other local or peered address space, such as non-RFC1918 peerings; custom routes still need an independent review.
 
+GitHub-hosted runners on Azure private networking are IPv4-only, so the VNet and subnet address inputs accept IPv4 CIDRs only. The VNet this module manages must stay IPv4-only: Terraform owns its address space and would remove IPv6 ranges added outside Terraform. Place IPv6 workloads in a separate VNet and control any peering to it outside this module.
+
 Private-service access is denied by default. To allow a required private destination, configure `approved_private_service_rules` with its CIDR, required ports, and protocol. Runner-subnet destinations remain denied even if included in an exception:
 
 ```hcl
